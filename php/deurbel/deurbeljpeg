@@ -1,0 +1,52 @@
+<?php
+
+require_once('class.phpmailer.php');
+require_once('class.smtp.php');
+
+define('GUSER', 'YOUR@ADDRESS>COM'); // GMail username
+define('GPWD', 'YOURPASSWORD'); // GMail password
+define('SNAPSHOT_URL', 'http://192.168.4.7/webcapture.jpg?command=snap&channel=1'); // snapshot url.
+define('SNAPSHOT_DIR', '/var/www/deurbel');
+
+function take_snapshot() {
+
+	//$filename=date("c") . ".jpg"; //Don't save with timestamp-formatted filename, but overwrite previous snapshot
+	$filename=snapshot . ".jpg";
+	$filepath=SNAPSHOT_DIR . DIRECTORY_SEPARATOR . $filename;
+	
+	$snapshot_image=file_get_contents(SNAPSHOT_URL);
+	file_put_contents($filepath, $snapshot_image);
+	return $filepath;
+} 
+
+function smtpmailer($to, $from, $from_name, $subject, $body, $attachment) { 
+	global $error;
+	$mail = new PHPMailer();  // create a new object
+	$mail->IsSMTP(); // enable SMTP
+	$mail->SMTPDebug = 0;  // debugging: 1 = errors and messages, 2 = messages only
+	$mail->SMTPAuth = true;  // authentication enabled
+	$mail->SMTPSecure = 'ssl'; // secure transfer enabled REQUIRED for GMail
+	$mail->Host = 'smtp.gmail.com';
+	$mail->Port = 465; 
+	$mail->Username = GUSER;  
+	$mail->Password = GPWD;           
+	$mail->SetFrom($from, $from_name);
+	$mail->Subject = $subject;
+	$mail->Body = $body;
+	$mail->AddAddress($to);
+	$mail->AddCC('your@address.com', 'Second Recipient');
+	$mail->addAttachment($attachment, 'snapshot.jpg');
+	if(!$mail->Send()) {
+		$error = 'Mail error: '.$mail->ErrorInfo; 
+		echo $error;
+	} else {
+		$error = 'Message sent!';
+		echo $error;
+	}
+} 
+
+$snapshot = take_snapshot();
+
+smtpmailer(GUSER, GUSER, 'Your Name', 'Deurbel galerij', 'Er is op ' . date('D, d M Y H:i:s') . ' aangebeld, zie de bijlage ', $snapshot);
+
+?>
